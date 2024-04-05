@@ -11,13 +11,17 @@ import (
 	"net/http"
 	"os"
 	"unicode/utf8"
+
+	"github.com/fatih/color"
 )
 
 func login() {
 	var username string
 	var password string
 
-	fmt.Println("Přihlášení do BakaGo")
+	blue := color.New(color.FgBlue).SprintFunc()
+
+	fmt.Printf("Přihlášení do %s\n", blue("BakaGo"))
 	fmt.Println("Vaše údaje nejsou zasílány žádné třetí straně.")
 	fmt.Println()
 	fmt.Print("Uživatelské jméno: ")
@@ -44,7 +48,7 @@ func login() {
 		_ = json.Unmarshal(content, &responseData)
 		
 		if (responseData.Error == "invalid_grant") {
-			println("Neplatné uživatelské jméno nebo heslo!")
+			color.Red("Neplatné uživatelské jméno nebo heslo!")
 			os.Exit(1)
 		}
 	}
@@ -53,7 +57,7 @@ func login() {
 	_ = json.Unmarshal(content, &responseData)
 	utils.SaveAccessInfo(responseData)
 
-	fmt.Println("Byli jste úspěšně přihlášeni.")
+	color.Green("Byli jste úspěšně přihlášeni.")
 }
 
 func marks() {
@@ -97,9 +101,12 @@ func marks() {
 		}
 	}
 
+	blue := color.New(color.FgBlue).SprintFunc()
+	green := color.New(color.FgGreen).SprintFunc()
+
 	for _, subject := range responseData.Subjects {
 		var paddedName string = fmt.Sprintf("%-*s", maxLen, subject.Subject.Name)
-		fmt.Printf("%v - %v - %v\n", subject.Subject.Abbrev, paddedName, subject.AverageText)
+		fmt.Printf("%v - %v - %v\n", blue(subject.Subject.Abbrev), paddedName, green(subject.AverageText))
 	}
 }
 
