@@ -5,6 +5,19 @@ import (
 	"os"
 )
 
+const (
+	TIMETABLE_COMMAND = "timetable"
+	AVERAGES_COMMAND = "averages"
+)
+
+func timetable() {
+	fmt.Println("Timetable")
+}
+
+func averages() {
+	fmt.Println("Averages")
+}
+
 func main() {
 	var args []string
 	var flags []string
@@ -17,13 +30,18 @@ func main() {
 		args = append(args, arg)
 	}
 
-	fmt.Println("Arguments:")
-	for _, arg := range args {
-		fmt.Println(arg)
+	if len(args) == 0 {
+		fmt.Println("No arguments!")
+		os.Exit(1)
 	}
 
-	fmt.Println("Flags:")
-	for _, flag := range flags {
-		fmt.Println(flag)
+	switch (args[0]) {
+	case TIMETABLE_COMMAND:
+		timetable()
+	case AVERAGES_COMMAND:
+		averages()
+	default:
+		fmt.Println("Command not found")
+		os.Exit(1)
 	}
 }
