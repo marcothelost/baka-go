@@ -1,41 +1,32 @@
 package main
 
 import (
+	"baka-go/constants"
 	"baka-go/types"
+	"baka-go/utils"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
-)
-
-const (
-	BAKALARI_ENDPOINT = "https://sosro.bakalari.cz"
-)
-
-const (
-	LOGIN_COMMAND = "login"
-	TIMETABLE_COMMAND = "timetable"
-	AVERAGES_COMMAND = "averages"
-)
-
-const (
-	LOGIN_ROUTE = "/api/login"
+	"unicode/utf8"
 )
 
 func getEndpointURL(route string) string {
-	return BAKALARI_ENDPOINT + route
+	return constants.BAKALARI_ENDPOINT + route
 }
 
 func login() {
 	var username string
 	var password string
 
-	fmt.Print("Login\n\n")
-	fmt.Print("Username: ")
+	fmt.Println("Přihlášení do BakaGo")
+	fmt.Println("Vaše údaje nejsou zasílány žádné třetí straně.")
+	fmt.Println()
+	fmt.Print("Uživatelské jméno: ")
 	fmt.Scan(&username)
-	fmt.Print("Password: ")
+	fmt.Print("Heslo: ")
 	fmt.Scan(&password)
 	fmt.Println()
 
@@ -44,35 +35,65 @@ func login() {
 	)
 	buffer := bytes.NewBuffer(postData)
 
-	response, err := http.Post(getEndpointURL(LOGIN_ROUTE), "application/x-www-form-urlencoded", buffer)
+	res, err := http.Post(getEndpointURL(constants.LOGIN_ROUTE), "application/x-www-form-urlencoded", buffer)
 	if err != nil {
 		panic(err)
 	}
-	defer response.Body.Close()
+	defer res.Body.Close()
 
-	content, _ := io.ReadAll(response.Body)
+	content, _ := io.ReadAll(res.Body)
 
-	if (response.StatusCode != 200) {
-		var data types.BakalariErrorResponse
-		_ = json.Unmarshal(content, &data)
+	if (res.StatusCode != 200) {
+		var responseData types.BakalariError
+		_ = json.Unmarshal(content, &responseData)
 		
-		if (data.Error == "invalid_grant") {
+		if (responseData.Error == "invalid_grant") {
 			println("Neplatné uživatelské jméno nebo heslo!")
 			os.Exit(1)
 		}
 	}
 
-	var data types.BakalariLoginResponse
-	_ = json.Unmarshal(content, &data)
-	fmt.Println(data.Access_Token)
+	var responseData types.AccessInfo
+	_ = json.Unmarshal(content, &responseData)
+	utils.SaveAccessInfo(responseData)
+
+	fmt.Println("Byli jste úspěšně přihlášeni.")
 }
 
-func timetable() {
-	fmt.Println("Timetable")
-}
+func marks() {
+	var accessInfo types.AccessInfo = utils.GetAccessInfo()
 
-func averages() {
-	fmt.Println("Averages")
+	req, err := http.NewRequest("GET", getEndpointURL(constants.MARKS_ROUTE), nil)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Bearer " + accessInfo.Access_Token)
+
+	if err != nil {
+		panic(err)
+	}
+
+	client := &http.Client{}
+	res, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
+
+	content, _ := io.ReadAll(res.Body)
+
+	var responseData types.MarksListing
+	_ = json.Unmarshal(content, &responseData)
+
+	var maxLen int = 0
+	for _, subject := range responseData.Subjects {
+		if utf8.RuneCountInString(subject.Subject.Name) > maxLen {
+			maxLen = utf8.RuneCountInString(subject.Subject.Name)
+		}
+	}
+
+	for _, subject := range responseData.Subjects {
+		var paddedName string = fmt.Sprintf("%-*s", maxLen, subject.Subject.Name)
+		fmt.Printf("%v - %v - %v\n", subject.Subject.Abbrev, paddedName, subject.AverageText)
+	}
 }
 
 func main() {
@@ -92,13 +113,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	switch (args[0]) {
-	case LOGIN_COMMAND:
+	if (args[0] == constants.LOGIN_COMMAND) {
 		login()
-	case TIMETABLE_COMMAND:
-		timetable()
-	case AVERAGES_COMMAND:
-		averages()
+		return
+	}
+
+	switch (args[0]) {
+	case constants.MARKS_COMMAND:
+		marks()
 	default:
 		fmt.Println("Command not found")
 		os.Exit(1)
