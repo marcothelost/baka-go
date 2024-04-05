@@ -13,10 +13,6 @@ import (
 	"unicode/utf8"
 )
 
-func getEndpointURL(route string) string {
-	return constants.BAKALARI_ENDPOINT + route
-}
-
 func login() {
 	var username string
 	var password string
@@ -35,7 +31,7 @@ func login() {
 	)
 	buffer := bytes.NewBuffer(postData)
 
-	res, err := http.Post(getEndpointURL(constants.LOGIN_ROUTE), "application/x-www-form-urlencoded", buffer)
+	res, err := http.Post(utils.GetEndpointURL(constants.LOGIN_ROUTE), "application/x-www-form-urlencoded", buffer)
 	if err != nil {
 		panic(err)
 	}
@@ -63,7 +59,7 @@ func login() {
 func marks() {
 	var accessInfo types.AccessInfo = utils.GetAccessInfo()
 
-	req, err := http.NewRequest("GET", getEndpointURL(constants.MARKS_ROUTE), nil)
+	req, err := http.NewRequest("GET", utils.GetEndpointURL(constants.MARKS_ROUTE), nil)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Authorization", "Bearer " + accessInfo.Access_Token)
 
@@ -77,6 +73,17 @@ func marks() {
 		panic(err)
 	}
 	defer res.Body.Close()
+
+	if (res.StatusCode == 401) {
+		accessInfo = utils.HandleExpiredToken()
+		req.Header.Set("Authorization", "Bearer " + accessInfo.Access_Token)
+
+		res, err = client.Do(req)
+		if err != nil {
+			panic(err)
+		}
+		defer res.Body.Close()
+	}
 
 	content, _ := io.ReadAll(res.Body)
 
