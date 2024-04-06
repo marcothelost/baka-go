@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+
+	"github.com/fatih/color"
 )
 
 func getAccessInfoEntries(f *os.File) []string {
@@ -68,8 +70,8 @@ func SaveAccessInfo(acessInfo types.AccessInfo) {
 func HandleExpiredToken() types.AccessInfo {
 	f, err := os.Open(constants.DATA_DIRECTORY + "/" + constants.ACCESS_INFO_FILE)
 	if err != nil {
-		fmt.Println("Pro použití BakaGO se musíte přihlásit!")
-		fmt.Println("-- bakago login")
+		fmt.Println("Pro použití BakaGo se musíte přihlásit!")
+		color.Red("-- bakago login")
 		os.Exit(1)
 	}
 	defer f.Close()
@@ -89,8 +91,8 @@ func HandleExpiredToken() types.AccessInfo {
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		fmt.Println("Vypršel váš refresh token! Musíte se znou přihlásit!")
-		fmt.Println("-- bakago login")
+		color.Red("Vypršel váš refresh token! Musíte se znou přihlásit!")
+		color.Red("-- bakago login")
 		return types.AccessInfo{}
 	}
 

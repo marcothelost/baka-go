@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"slices"
 	"unicode/utf8"
 
 	"github.com/fatih/color"
@@ -60,7 +61,7 @@ func login() {
 	color.Green("Byli jste úspěšně přihlášeni.")
 }
 
-func marks() {
+func marks(flags []string) {
 	var accessInfo types.AccessInfo = utils.GetAccessInfo()
 
 	req, err := http.NewRequest("GET", utils.GetEndpointURL(constants.MARKS_ROUTE), nil)
@@ -103,10 +104,20 @@ func marks() {
 
 	blue := color.New(color.FgBlue).SprintFunc()
 	green := color.New(color.FgGreen).SprintFunc()
+	yellow := color.New(color.FgYellow).SprintFunc()
 
 	for _, subject := range responseData.Subjects {
 		var paddedName string = fmt.Sprintf("%-*s", maxLen, subject.Subject.Name)
-		fmt.Printf("%v - %v - %v\n", blue(subject.Subject.Abbrev), paddedName, green(subject.AverageText))
+		fmt.Printf("%v - %v - %v", blue(subject.Subject.Abbrev), paddedName, green(subject.AverageText))
+		if !slices.Contains(flags, "l") {
+			fmt.Println()
+			continue
+		}
+		fmt.Print("- ")
+		for _, mark := range subject.Marks {
+			fmt.Printf("%v ", yellow(mark.MarkText))
+		}
+		fmt.Println()
 	}
 }
 
@@ -134,9 +145,10 @@ func main() {
 
 	switch (args[0]) {
 	case constants.MARKS_COMMAND:
-		marks()
+		marks(flags)
 	default:
-		fmt.Println("Command not found")
+		color.Red("Tento příkaz neexistuje!")
+		color.Red("-- bakago help")
 		os.Exit(1)
 	}
 }
