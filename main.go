@@ -72,41 +72,10 @@ func help() {
 }
 
 func marks(flags []string) {
-	var accessInfo types.AccessInfo = utils.GetAccessInfo()
-
-	req, err := http.NewRequest("GET", utils.GetEndpointURL(constants.MARKS_ROUTE), nil)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Authorization", "Bearer " + accessInfo.Access_Token)
-
-	if err != nil {
-		panic(err)
-	}
-
-	client := &http.Client{}
-	res, err := client.Do(req)
-	if err != nil {
-		panic(err)
-	}
-	defer res.Body.Close()
-
-	if (res.StatusCode == 401) {
-		accessInfo = utils.HandleExpiredToken()
-		req.Header.Set("Authorization", "Bearer " + accessInfo.Access_Token)
-
-		res, err = client.Do(req)
-		if err != nil {
-			panic(err)
-		}
-		defer res.Body.Close()
-	}
-
-	content, _ := io.ReadAll(res.Body)
-
-	var responseData types.MarksListing
-	_ = json.Unmarshal(content, &responseData)
+	var marks = utils.FetchData[types.MarksListing](constants.MARKS_ROUTE)
 
 	var maxLen int = 0
-	for _, subject := range responseData.Subjects {
+	for _, subject := range marks.Subjects {
 		if utf8.RuneCountInString(subject.Subject.Name) > maxLen {
 			maxLen = utf8.RuneCountInString(subject.Subject.Name)
 		}
@@ -116,7 +85,7 @@ func marks(flags []string) {
 	green := color.New(color.FgGreen).SprintFunc()
 	yellow := color.New(color.FgYellow).SprintFunc()
 
-	for _, subject := range responseData.Subjects {
+	for _, subject := range marks.Subjects {
 		var paddedName string = fmt.Sprintf("%-*s", maxLen, subject.Subject.Name)
 		fmt.Printf("%v - %v - %v", blue(subject.Subject.Abbrev), paddedName, green(subject.AverageText))
 		if !slices.Contains(flags, "l") {
@@ -127,6 +96,59 @@ func marks(flags []string) {
 		for _, mark := range subject.Marks {
 			fmt.Printf("%v ", yellow(mark.MarkText))
 		}
+		fmt.Println()
+	}
+}
+
+func final(flags []string) {
+	var finalMarks = utils.FetchData[types.FinalMarksListing](constants.FINAL_ROUTE)
+	uniqueSubjects := make(map[string]*types.Subject)
+
+	for _, term := range finalMarks.CertificateTerms {
+		for _, subject := range term.Subjects {
+			uniqueSubjects[subject.Id] = &subject
+		}	
+	}
+
+	var maxLen int = 0
+	for _, subject := range uniqueSubjects {
+		if utf8.RuneCountInString(subject.Abbrev) > maxLen {
+			maxLen = utf8.RuneCountInString(subject.Abbrev)
+		}
+	}
+
+	blue := color.New(color.FgBlue)
+	green := color.New(color.FgGreen).SprintFunc()
+	yellow := color.New(color.FgYellow).SprintFunc()
+
+	blue.Printf("%-*s ", maxLen + 2, "")
+	for _, term := range finalMarks.CertificateTerms {
+		fmt.Printf("%v ", green(term.Grade))
+	}
+	fmt.Println()
+
+
+	for _, subject := range uniqueSubjects {
+		blue.Printf("%-*s", maxLen, subject.Abbrev)
+		fmt.Print(" - ")
+		for _, term := range finalMarks.CertificateTerms {
+			var printedMark string = " "
+			for _, mark := range term.FinalMarks {
+				if mark.SubjectId == subject.Id {
+					if len(mark.MarkText) == 0 {
+						printedMark = "?"
+						continue
+					}
+					printedMark = mark.MarkText
+				}
+			}
+			fmt.Printf("%v ", printedMark)
+		}
+		if !slices.Contains(flags, "l") {
+			fmt.Println()
+			continue
+		}
+		fmt.Printf("- %v", yellow(subject.Name))
 		fmt.Println()
 	}
 }
@@ -159,6 +181,8 @@ func main() {
 		help()
 	case constants.MARKS_COMMAND:
 		marks(flags)
+	case constants.FINAL_COMMAND:
+		final(flags)
 	default:
 		color.Red("Tento příkaz neexistuje!")
 		color.Red("-- bakago help")

@@ -104,3 +104,39 @@ func HandleExpiredToken() types.AccessInfo {
 
 	return responseData
 }
+
+func FetchData[T any](route string) T {
+	var accessInfo types.AccessInfo = GetAccessInfo()
+
+	req, err := http.NewRequest("GET", GetEndpointURL(route), nil)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Bearer " + accessInfo.Access_Token)
+
+	if err != nil {
+		panic(err)
+	}
+
+	client := &http.Client{}
+	res, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
+
+	if (res.StatusCode == 401) {
+		accessInfo = HandleExpiredToken()
+		req.Header.Set("Authorization", "Bearer " + accessInfo.Access_Token)
+
+		res, err = client.Do(req)
+		if err != nil {
+			panic(err)
+		}
+		defer res.Body.Close()
+	}
+
+	content, _ := io.ReadAll(res.Body)
+
+	var responseData T
+	_ = json.Unmarshal(content, &responseData)
+	return responseData
+}

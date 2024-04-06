@@ -14,8 +14,10 @@ const (
 	HELP_COMMAND = "help"
 	LOGIN_COMMAND = "login"
 	MARKS_COMMAND = "marks"
+	FINAL_COMMAND = "final"
 )
 const (
 	LOGIN_ROUTE = "/api/login"
 	MARKS_ROUTE = "/api/3/marks"
+	FINAL_ROUTE = "/api/3/marks/final"
 )
