@@ -61,6 +61,16 @@ func login() {
 	color.Green("Byli jste úspěšně přihlášeni.")
 }
 
+func help() {
+	blue := color.New(color.FgBlue).SprintFunc()
+	green := color.New(color.FgGreen).SprintFunc()
+	yellow := color.New(color.FgYellow).SprintFunc()
+
+	fmt.Printf("%v %v - Spustí proces přihlášení\n", blue("bakago"), green("login"))
+	fmt.Printf("%v %v - Vypíše průměry známek\n", blue("bakago"), green("marks"))
+	fmt.Printf("  ○ marks %v - Za výpis přidá seznam známek\n", yellow("-l"))
+}
+
 func marks(flags []string) {
 	var accessInfo types.AccessInfo = utils.GetAccessInfo()
 
@@ -134,8 +144,9 @@ func main() {
 	}
 
 	if len(args) == 0 {
-		fmt.Println("No arguments!")
-		os.Exit(1)
+		color.Blue("BakaGo " + constants.PROJECT_VERSION)
+		fmt.Println("-- bakago help")
+		return
 	}
 
 	if (args[0] == constants.LOGIN_COMMAND) {
@@ -144,6 +155,8 @@ func main() {
 	}
 
 	switch (args[0]) {
+	case constants.HELP_COMMAND:
+		help()
 	case constants.MARKS_COMMAND:
 		marks(flags)
 	default:
